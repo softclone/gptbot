@@ -11,7 +11,7 @@ from sc2.player import Bot, Computer, Human
 from sc2.ids.ability_id import AbilityId
 
 
-class WallOffBot(BotAI):
+class WallOffBot2(BotAI):
     async def on_step(self, iteration):
 
         if self.townhalls:
@@ -142,7 +142,7 @@ class WallOffBot(BotAI):
         elif enemy_structures:
             for marine in self.units(UnitTypeId.MARINE):
                 self.target = enemy_structures.closest_to(marine)
-        elif self.supply_army > 11 and self.go_all_in == False:
+        elif self.supply_army > 9 and self.go_all_in == False:
             self.target = self.enemy_start_locations[0]
             self.go_all_in = True
             self.marine_leader = self.units(UnitTypeId.MARINE).closest_to(
@@ -163,14 +163,15 @@ class WallOffBot(BotAI):
                     marine.move(self.target.position)
 
             if enemy_units:
-                self.marine_leader = self.units(UnitTypeId.MARINE).closest_to(self.enemy_start_locations[0])
+                self.marine_leader = self.units(UnitTypeId.MARINE).closest_to(
+                    self.enemy_start_locations[0])
                 for marine in self.units(UnitTypeId.MARINE):
-                    enemy = self.target.closer_than(lambda u: u.distance_to(marine) <= marine.ground_range).sorted(lambda u: u.health_percentage).first
-                    if marine.distance_to(enemy) >= marine.ground_range-2 and marine.distance_to(enemy) < marine.ground_range+1:
-                        marine.move(enemy.position)
-                        marine.attack(enemy)
+                    closest_enemy = enemy_units.closest_to(marine)
+                    if marine.distance_to(closest_enemy) >= marine.ground_range-2 and marine.distance_to(closest_enemy) < marine.ground_range+2:
+                        marine.move(closest_enemy.position)
+                        marine.attack(closest_enemy)
                     else:
-                        marine.attack(enemy)
+                        marine.attack(closest_enemy)
                 for scv in self.scvs:
                     scv.attack(enemy_units.closest_to(self.marine_leader))
                 # elif enemy_structures:
@@ -189,8 +190,8 @@ def main():
 
     run_game(
         maps.get("CatalystLE"), [
-        Bot(Race.Terran, WallOffBot()),
-        #Bot(Race.Terran, WallOffBot()),
+        Bot(Race.Terran, WallOffBot2()),
+        #Bot(Race.Terran, WallOffBot2()),
         # Bot(Race.Protoss, CannonRushBot(), name="CheeseCannon")
         Computer(Race.Random, Difficulty.CheatInsane)
         #Human(Race.Terran)
