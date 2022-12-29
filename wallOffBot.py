@@ -101,19 +101,22 @@ class WallOffBot(BotAI):
 
         # Attack with all Marines 
         # Attack with all Marines 
-        if self.supply_army > 12:
-            # Select a target to attack
-            enemy_units = self.enemy_units
-            enemy_structures = self.enemy_structures
-            if enemy_units:
-                for marine in self.units(UnitTypeId.MARINE):
-                    target = enemy_units.closest_to(marine)
-            elif enemy_structures:
-                for marine in self.units(UnitTypeId.MARINE):
-                    target = enemy_structures.closest_to(marine)
-            else:
-                target = self.enemy_start_locations[0]
-            # Move and attack with Marines
+        
+        # Select a target to attack
+        
+        enemy_units = self.enemy_units
+        enemy_structures = self.enemy_structures
+        if enemy_units:
+            for marine in self.units(UnitTypeId.MARINE):
+                target = enemy_units.closest_to(marine)
+        elif enemy_structures:
+            for marine in self.units(UnitTypeId.MARINE):
+                target = enemy_structures.closest_to(marine)
+        elif self.supply_army > 9:
+            target = self.enemy_start_locations[0]
+            
+        # Move and attack with Marines
+        if target:
             for marine in self.units(UnitTypeId.MARINE):
                 # Stutter-step to move closer to the target if it is out of range
                 if marine.distance_to(target) > marine.ground_range:
@@ -121,12 +124,13 @@ class WallOffBot(BotAI):
                 
                 else:
                     if enemy_units:
-                        closest_enemy = enemy_units.closest_to(marine)
-                        if marine.distance_to(closest_enemy) >= marine.ground_range-1:
-                            marine.move(marine.position)
-                            marine.attack(closest_enemy)
-                        else:
-                            marine.attack(closest_enemy)
+                        for marine in self.units(UnitTypeId.MARINE):
+                            closest_enemy = enemy_units.closest_to(marine)
+                            if marine.distance_to(closest_enemy) >= marine.ground_range-2:
+                                marine.move(marine.position)
+                                marine.attack(closest_enemy)
+                            else:
+                                marine.attack(closest_enemy)
                     elif enemy_structures:
                         for marine in self.units(UnitTypeId.MARINE):
                             target = enemy_structures.closest_to(marine)
@@ -134,9 +138,9 @@ class WallOffBot(BotAI):
                     
             # and SCVs in control group 1
             #for scv in self.units(UnitTypeId.SCV):
-             #   if scv.is_carrying_minerals:
-              #      scv.tags
-               # if scv.stay_home == 1:
+                #   if scv.is_carrying_minerals:
+                #      scv.tags
+                # if scv.stay_home == 1:
                 #    continue
                 #scv.attack(target)
 
@@ -144,7 +148,7 @@ def main():
     run_game(
         maps.get("CatalystLE"), [
         Bot(Race.Terran, WallOffBot()),
-        Computer(Race.Random, Difficulty.VeryHard)
+        Bot(Race.Terran, WallOffBot())
 ], realtime=True)
 
 if __name__ == "__main__":
