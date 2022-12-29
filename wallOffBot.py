@@ -78,8 +78,9 @@ class WallOffBot(BotAI):
                 rax.train(UnitTypeId.MARINE)
 
         # Send idle SCVs to harvest minerals
-        for scv in self.units(UnitTypeId.SCV).idle:
-            scv.gather(self.mineral_field.closest_to(cc))
+        if self.townhalls:
+            for scv in self.units(UnitTypeId.SCV).idle:
+                scv.gather(self.mineral_field.closest_to(cc))
         
         # build more supply depots
         if self.structures(UnitTypeId.BARRACKS).amount == 3 and len(depot_placement_positions) > 0 and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0:
@@ -88,13 +89,15 @@ class WallOffBot(BotAI):
                 target_depot_location: Point2 = depot_placement_positions.pop()
                 await self.build(UnitTypeId.SUPPLYDEPOT, target_depot_location)
 
-        if depots.amount >= 2 and self.supply_left < 5 and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0:
-            if self.can_afford(UnitTypeId.SUPPLYDEPOT):
-                await self.build(UnitTypeId.SUPPLYDEPOT, near=cc)
+        if self.townhalls:
+            if depots.amount >= 2 and self.supply_left < 5 and self.already_pending(UnitTypeId.SUPPLYDEPOT) == 0:
+                if self.can_afford(UnitTypeId.SUPPLYDEPOT):
+                    await self.build(UnitTypeId.SUPPLYDEPOT, near=cc)
 
         # Build a fourth Barracks near the townhall
-        if self.structures(UnitTypeId.BARRACKS).amount >= 3 and self.minerals > 250 and self.already_pending(UnitTypeId.BARRACKS) == 0:
-            await self.build(UnitTypeId.BARRACKS, near=cc)
+        if self.townhalls:
+            if self.structures(UnitTypeId.BARRACKS).amount >= 3 and self.minerals > 250 and self.already_pending(UnitTypeId.BARRACKS) == 0:
+                await self.build(UnitTypeId.BARRACKS, near=cc)
 
         # Attack with all Marines 
         # Attack with all Marines 
@@ -103,9 +106,11 @@ class WallOffBot(BotAI):
             enemy_units = self.enemy_units
             enemy_structures = self.enemy_structures
             if enemy_units:
-                target = enemy_units.closest_to(self.start_location)
+                for marine in self.units(UnitTypeId.MARINE):
+                    target = enemy_units.closest_to(marine)
             elif enemy_structures:
-                target = enemy_structures.closest_to(self.start_location)
+                for marine in self.units(UnitTypeId.MARINE):
+                    target = enemy_structures.closest_to(marine)
             else:
                 target = self.enemy_start_locations[0]
             # Move and attack with Marines
@@ -119,8 +124,13 @@ class WallOffBot(BotAI):
                         closest_enemy = enemy_units.closest_to(marine)
                         if marine.distance_to(closest_enemy) >= marine.ground_range-1:
                             marine.move(marine.position)
-                    
                             marine.attack(closest_enemy)
+                        else:
+                            marine.attack(closest_enemy)
+                    elif enemy_structures:
+                        for marine in self.units(UnitTypeId.MARINE):
+                            target = enemy_structures.closest_to(marine)
+                            marine.attack(target)
                     
             # and SCVs in control group 1
             #for scv in self.units(UnitTypeId.SCV):
@@ -132,7 +142,7 @@ class WallOffBot(BotAI):
 
 def main():
     run_game(
-        maps.get("(2)CatalystLE"), [
+        maps.get("CatalystLE"), [
         Bot(Race.Terran, WallOffBot()),
         Computer(Race.Random, Difficulty.VeryHard)
 ], realtime=True)
