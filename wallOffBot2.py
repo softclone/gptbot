@@ -193,9 +193,9 @@ def main():
         Bot(Race.Terran, WallOffBot2()),
         #Bot(Race.Terran, WallOffBot2()),
         # Bot(Race.Protoss, CannonRushBot(), name="CheeseCannon")
-        Computer(Race.Random, Difficulty.CheatInsane)
+        Computer(Race.Random, Difficulty.VeryHard)
         #Human(Race.Terran)
-], realtime=False, save_replay_as="gptbot"+randstr+".SC2Replay",)
+], realtime=True, save_replay_as="gptbot"+randstr+".SC2Replay",)
 
 if __name__ == "__main__":
     main()
