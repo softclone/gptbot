@@ -1,14 +1,18 @@
 from datetime import date, datetime
-from random import random
+from random import *
 from time import time
 
 from sc2 import maps
 from sc2.bot_ai import BotAI
 from sc2.data import Difficulty, Race
 from sc2.ids.unit_typeid import UnitTypeId
+from sc2.ids.upgrade_id import UpgradeId
+from sc2.ids.ability_id import AbilityId
 from sc2.main import run_game
 from sc2.player import Bot, Computer, Human
 from sc2.ids.ability_id import AbilityId
+
+from gobo import ZergBot
 
 
 class MicroMarine(BotAI):
@@ -100,22 +104,20 @@ class MicroMarine(BotAI):
             self.rally = self.enemy_start_locations[0]
             # Select 12 SCVs to attack with the Marines
             for scv in self.starting_scvs:
-                scv.move(self.main_base_ramp.top_center)
+                scv.attack(self.enemy_start_locations[0])
             for marine in self.units(UnitTypeId.MARINE):
                 marine.move(self.main_base_ramp.top_center)
 
         if self.go_all_in:
             for scv in self.starting_scvs:
-                if scv.distance_to(self.marine_leader) > 4:
                     #direction = scv.position - self.marine_leader.position
                     #direction = direction.normalized
                     #scv.move(direction)
-                    scv.move(self.marine_leader)
-
-                else:
                     scv.attack(self.enemy_start_locations[0])
+                    if scv.distance_to(self.starting_scvs.center) > 3:
+                        scv.move(self.starting_scvs.center)
             for marine in self.units(UnitTypeId.MARINE):
-                if marine.distance_to(self.marine_leader) > 8:
+                if marine.distance_to(self.marine_leader) > 14:
                     marine.move(self.marine_leader)
                 else:
                     marine.attack(self.enemy_start_locations[0])
@@ -125,7 +127,7 @@ class MicroMarine(BotAI):
             self.go_all_in = False
             self.rally = self.main_base_ramp.top_center
             for marine in self.units(UnitTypeId.MARINE):
-                marine.attack(self.main_base_ramp.top_center)
+                marine.attack(self.units(UnitTypeId.MARINE).center)
 
            
             
@@ -141,7 +143,7 @@ class MicroMarine(BotAI):
 
             # Find all banelings within 3 distance of each marine
             banelings_nearby = self.enemy_units(UnitTypeId.BANELING).filter(lambda x: x.distance_to(marine) <= 4)
-            melee_attackers_nearby = melee_units.filter(lambda x: x.distance_to(marine) <= 3)
+            melee_attackers_nearby = melee_units.filter(lambda x: x.distance_to(marine) <= 2)
             # If there are banelings nearby, move the marine directly away from them
             if banelings_nearby:
                 # Calculate the direction to move in by subtracting the marine's position from the baneling's position
@@ -179,7 +181,7 @@ class MicroMarine(BotAI):
                 marine.attack(marine.target)
             
         if self.units(UnitTypeId.MARINE):
-            if self.units(UnitTypeId.MARINE).closer_than(8, self.marine_leader).amount < (0.9 * self.units(UnitTypeId.MARINE).amount):
+            if self.units(UnitTypeId.MARINE).closer_than(5, self.marine_leader).amount < (0.8 * self.units(UnitTypeId.MARINE).closer_than(14, self.marine_leader).amount):
                 self.marine_leader.move(self.main_base_ramp.top_center)
         
         #depots 
@@ -272,9 +274,9 @@ def main():
     run_game(
         maps.get("CatalystLE"), [
         Bot(Race.Terran, MicroMarine()),
-        #Bot(Race.Terran, WallOffBot2()),
+        Bot(Race.Zerg, ZergBot()),
         # Bot(Race.Protoss, CannonRushBot(), name="CheeseCannon")
-        Computer(Race.Random, Difficulty.CheatInsane)
+        #Computer(Race.Random, Difficulty.CheatInsane)
         #Human(Race.Terran)
 ], realtime=False, save_replay_as="gptbot"+randstr+".SC2Replay",)
 
