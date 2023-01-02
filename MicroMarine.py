@@ -24,13 +24,14 @@ class MicroMarine(BotAI):
             self.go_all_in = False
 
             self.cc = self.townhalls[0]
-            self.starting_scvs = self.units(UnitTypeId.SCV).take(12)
+            
             self.cc.train(UnitTypeId.SCV)
             
         if self.units(UnitTypeId.MARINE):
             self.marine_leader = self.units(UnitTypeId.MARINE).closest_to(self.enemy_start_locations[0])
 
-
+        if  self.units(UnitTypeId.SCV):
+            self.scv_leader = self.units(UnitTypeId.SCV).closest_to(self.enemy_start_locations[0])
        
 
         #grouping / splitting / stutter stepping
@@ -64,7 +65,7 @@ class MicroMarine(BotAI):
             [UnitTypeId.ZEALOT, UnitTypeId.ZERGLING, UnitTypeId.SCV, UnitTypeId.PROBE, UnitTypeId.DRONE])
         
         enemy_workers = self.enemy_units(
-            [UnitTypeId.DRONE, UnitTypeId.SCV, UnitTypeId.PROBE])
+            [UnitTypeId.DRONE, UnitTypeId.SCV, UnitTypeId.PROBE, UnitTypeId.MULE])
 
         enemy_structures = self.enemy_structures
 
@@ -72,12 +73,13 @@ class MicroMarine(BotAI):
         if enemy_units:
             #shoot at the lowest health enemy in range
             for marine in self.units(UnitTypeId.MARINE):
-                if enemy_units.in_attack_range_of(marine):
+                banelings_nearby = (self.enemy_units(UnitTypeId.BANELING).filter(lambda x: x.distance_to(marine) <= 4))
+                if enemy_units.in_attack_range_of(marine) and banelings_nearby:
                     marine.target = sorted(enemy_units.in_attack_range_of(marine), key=lambda u: u.health + u.shield)[0]
                 elif enemy_workers.in_attack_range_of(marine):
                     marine.target = sorted(enemy_workers.in_attack_range_of(marine), key=lambda u: u.health + u.shield)[0]
                 else:
-                    marine.target = enemy_units.closest_to(marine)
+                    marine.target = self.enemy_start_locations[0]
 
             #scvs are blockers
             for scv in self.starting_scvs:
@@ -102,6 +104,7 @@ class MicroMarine(BotAI):
         elif self.supply_army > 9 and self.go_all_in == False:
             self.go_all_in = True
             self.rally = self.enemy_start_locations[0]
+            self.starting_scvs = self.units(UnitTypeId.SCV).take(16)
             # Select 12 SCVs to attack with the Marines
             for scv in self.starting_scvs:
                 scv.attack(self.enemy_start_locations[0])
@@ -110,12 +113,15 @@ class MicroMarine(BotAI):
 
         if self.go_all_in:
             for scv in self.starting_scvs:
-                    #direction = scv.position - self.marine_leader.position
-                    #direction = direction.normalized
-                    #scv.move(direction)
+                #direction = scv.position - self.marine_leader.position
+                #direction = direction.normalized
+                #scv.move(direction)
+                #scv.attack(self.enemy_start_locations[0])
+                if scv.distance_to(self.scv_leader) > 14:
+                    scv.move(self.scv_leader)
+                else:
                     scv.attack(self.enemy_start_locations[0])
-                    if scv.distance_to(self.starting_scvs.center) > 3:
-                        scv.move(self.starting_scvs.center)
+
             for marine in self.units(UnitTypeId.MARINE):
                 if marine.distance_to(self.marine_leader) > 14:
                     marine.move(self.marine_leader)
@@ -123,7 +129,7 @@ class MicroMarine(BotAI):
                     marine.attack(self.enemy_start_locations[0])
 
 
-        if self.go_all_in and self.supply_used < 30:
+        if self.go_all_in and self.supply_used < 28:
             self.go_all_in = False
             self.rally = self.main_base_ramp.top_center
             for marine in self.units(UnitTypeId.MARINE):
@@ -143,7 +149,7 @@ class MicroMarine(BotAI):
 
             # Find all banelings within 3 distance of each marine
             banelings_nearby = self.enemy_units(UnitTypeId.BANELING).filter(lambda x: x.distance_to(marine) <= 4)
-            melee_attackers_nearby = melee_units.filter(lambda x: x.distance_to(marine) <= 2)
+            melee_attackers_nearby = melee_units.filter(lambda x: x.distance_to(marine) < 2)
             # If there are banelings nearby, move the marine directly away from them
             if banelings_nearby:
                 # Calculate the direction to move in by subtracting the marine's position from the baneling's position
@@ -152,7 +158,7 @@ class MicroMarine(BotAI):
                 direction = direction.normalized
                 # Move the marine in the opposite direction of the banelings
                 marine.move(marine.position + direction)
-            
+                
             #retreat from melee attackers
             
             elif melee_attackers_nearby:
@@ -168,8 +174,9 @@ class MicroMarine(BotAI):
                 closest_enemy = enemy_units.closest_to(marine)
 
                 if marine.distance_to(closest_enemy) >= marine.ground_range-2 and marine.distance_to(closest_enemy) < marine.ground_range+2:
-                    marine.move(closest_enemy.position)
                     marine.attack(marine.target)
+                    marine.move(closest_enemy.position)
+                    
                 else:
                     marine.attack(marine.target)
                 for scv in self.starting_scvs:
@@ -177,12 +184,18 @@ class MicroMarine(BotAI):
 
             elif enemy_workers:
                 marine.attack(marine.target)
-            elif self.units(UnitTypeId.MARINE).amount > 12 and enemy_structures:
+            elif self.units(UnitTypeId.MARINE).amount > 16 and enemy_structures:
                 marine.attack(marine.target)
             
         if self.units(UnitTypeId.MARINE):
-            if self.units(UnitTypeId.MARINE).closer_than(5, self.marine_leader).amount < (0.8 * self.units(UnitTypeId.MARINE).closer_than(14, self.marine_leader).amount):
+            if self.units(UnitTypeId.MARINE).closer_than(5, self.marine_leader).amount < 3:
                 self.marine_leader.move(self.main_base_ramp.top_center)
+            if self.marine_leader.distance_to(self.enemy_start_locations[0]) - 1 < self.scv_leader.distance_to(self.enemy_start_locations[0]):
+                self.marine_leader.move(self.main_base_ramp.top_center)
+            if self.scv_leader.distance_to(self.enemy_start_locations[0]) < self.marine_leader.distance_to(self.enemy_start_locations[0]) and self.go_all_in:
+                if self.starting_scvs.closer_than(6, self.scv_leader).amount < 2:
+                    self.scv_leader.move(self.main_base_ramp.top_center)
+
         
         #depots 
         depot_placement_positions: FrozenSet[Point2] = self.main_base_ramp.corner_depots
@@ -276,7 +289,7 @@ def main():
         Bot(Race.Terran, MicroMarine()),
         Bot(Race.Zerg, ZergBot()),
         # Bot(Race.Protoss, CannonRushBot(), name="CheeseCannon")
-        #Computer(Race.Random, Difficulty.CheatInsane)
+        #Computer(Race.Random, Difficulty.VeryHard)
         #Human(Race.Terran)
 ], realtime=False, save_replay_as="gptbot"+randstr+".SC2Replay",)
 
